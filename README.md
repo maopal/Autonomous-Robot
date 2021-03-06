@@ -19,4 +19,4 @@ I have used the MPU9250 (sensors) & STM32F401RB (MCU):
  
  Step 5: Convert quaternions to Euleur Angles, and send data through UART
  
- Step 6: Monitor data in Python and produce live visualisation of rotation (see Visualisation.py)
+ Step 6: Monitor data in Python and produce live visualisation of orientation (see Visualisation.py)
