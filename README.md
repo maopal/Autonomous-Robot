@@ -17,5 +17,6 @@ I have used the MPU9250 (sensors) & STM32F401RB (MCU):
  
  Step4: Input Mag, ACC & Gyro values in North East Down (NED) form in madwickupdate. (TAKE CARE OF MAG AXIS MISALIGNMENT WITH ACC & GYRO) - See MPU9250 Datasheet to check visual representation of MAG axis compared to ACC & GYRO.
  
- Step 5: Convert quaternions to Euleur Angles
-  
+ Step 5: Convert quaternions to Euleur Angles, and send data through UART
+ 
+ Step 6: Monitor data in Python and produce live visualisation of rotation (see Visualisation.py)
