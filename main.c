@@ -1,9 +1,14 @@
 
+#define ARM_MATH_CM4
+
 #include "main.h"
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include "MadgwickAHRS.h"
+#include "arm_math.h"
+#include "math_helper.h"
 
 uint8_t snum[100];
 uint8_t MPU6050_ADDR = 0x68<<1;
@@ -14,10 +19,12 @@ double Az;
 double Gx;
 double Gy;
 double Gz;
-double mxyz[3];
 float hardx = 9.5, hardy = 37, hardz=-12.5; //hard iron bias (calc in Python)
 float softx= 1.02356, softy = 0.95597, softz = 1.02356; //soft iron bias (calc in Python)
 int16_t magmax[3] = {-32767, -32767, -32767};
+const float32_t A_f32[9] = {0.904593,0.018706, 0.036623,0.018706, 0.875807, -0.040483,0.036623,-0.040483,0.941098};
+float32_t AB_f32[9];
+float32_t mxyz[3]={1,1,1};
 float asax;
 float asay;
 float asaz;
@@ -100,10 +107,25 @@ uint8_t pwrmng[2] = {0x6B, 0x00};
   }
 
   magconfig();
+   
+/* USING MAGNETO CORRECTION
+     arm_matrix_instance_f32 A;
+     arm_matrix_instance_f32 B;
+     arm_matrix_instance_f32 AB;
+     arm_status status;
 
+      arm_mat_init_f32(&A, 3, 3, (float32_t *)A_f32);
+      arm_mat_init_f32(&B, 3, 1, (float32_t *)mxyz);
+      arm_mat_init_f32(&AB, 3, 1, (float32_t *)AB_f32);
+
+       status = arm_mat_mult_f32(&A, &B, &AB);
+       */
+	
   while (1)
   {
     read_mag(mxyz);
+	  	/* USING MAGNETO CORRECTION
+	  status = arm_mat_mult_f32(&A, &B, &AB); */
 
      read_gyro();
 
@@ -234,6 +256,11 @@ double* read_mag(double magfinal[3])
 	 		 magfinal[2] = MAG_Z_RAW*asaz*SCALE; */
 
 	 		//withcalibration
+			 
+			  /* USING MAGNETO CORRECTION
+	 		 magfinal[0] = MAG_X_RAW*asax*SCALE-13.578836;
+	 		 magfinal[1] = MAG_Y_RAW*asay*SCALE-15.216318;
+	 		 magfinal[2] = MAG_Z_RAW*asaz*SCALE-6.231530; */
 
 
 	 		magfinal[0] = ((MAG_X_RAW*asax*SCALE)-(hardx))*softx; //Gauss (Gs)
