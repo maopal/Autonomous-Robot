@@ -1,55 +1,78 @@
-
-#define ARM_MATH_CM4
-
+/* USER CODE BEGIN Header */
+/**
+  ******************************************************************************
+  * @file           : main.c
+  * @brief          : Main program body
+  ******************************************************************************
+  * @attention
+  *
+  * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
+  * All rights reserved.</center></h2>
+  *
+  * This software component is licensed by ST under BSD 3-Clause license,
+  * the "License"; You may not use this file except in compliance with the
+  * License. You may obtain a copy of the License at:
+  *                        opensource.org/licenses/BSD-3-Clause
+  *
+  ******************************************************************************
+  */
+/* USER CODE END Header */
+/* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include <string.h>
+
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
 #include <stdio.h>
-#include <math.h>
-#include <stdlib.h>
-#include "MadgwickAHRS.h"
-#include "arm_math.h"
-#include "math_helper.h"
+#include <string.h>
+/* USER CODE END Includes */
 
+/* Private typedef -----------------------------------------------------------*/
+/* USER CODE BEGIN PTD */
+
+/* USER CODE END PTD */
+
+/* Private define ------------------------------------------------------------*/
+/* USER CODE BEGIN PD */
+/* USER CODE END PD */
+
+/* Private macro -------------------------------------------------------------*/
+/* USER CODE BEGIN PM */
+
+/* USER CODE END PM */
+
+/* Private variables ---------------------------------------------------------*/
+TIM_HandleTypeDef htim9;
+
+UART_HandleTypeDef huart2;
+
+/* USER CODE BEGIN PV */
 uint8_t snum[100];
-uint8_t MPU6050_ADDR = 0x68<<1;
-uint8_t MAG_AD = 0xC<<1;
-double Ax;
-double Ay;
-double Az;
-double Gx;
-double Gy;
-double Gz;
-float hardx = 9.5, hardy = 37, hardz=-12.5; //hard iron bias (calc in Python)
-float softx= 1.02356, softy = 0.95597, softz = 1.02356; //soft iron bias (calc in Python)
-int16_t magmax[3] = {-32767, -32767, -32767};
-const float32_t A_f32[9] = {0.904593,0.018706, 0.036623,0.018706, 0.875807, -0.040483,0.036623,-0.040483,0.941098};
-float32_t AB_f32[9];
-float32_t mxyz[3]={1,1,1};
-float asax;
-float asay;
-float asaz;
-int16_t gyroxoffset=0;
-int16_t gyroyoffset=0;
-int16_t gyrozoffset=0;
-int16_t samples=0;
-float* roll;
-float* yaw;
-float* pitch;
-double x;
-double z;
-double y;
-typedef enum {
- zyx, zyz, zxy, zxz, yxz, yxy, yzx, yzy, xyz, xyx, xzy, xzx
-} RotSeq;
+uint8_t direction[20];
+int pulseticks=0;
+int revoultions=0;
+/* USER CODE END PV */
 
-double res[3];
-double yawdeg;
-double pitchdeg;
-double rolldeg;
+/* Private function prototypes -----------------------------------------------*/
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_USART2_UART_Init(void);
+static void MX_TIM9_Init(void);
+/* USER CODE BEGIN PFP */
+
+/* USER CODE END PFP */
+
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
+
+/* USER CODE END 0 */
+
+/**
+  * @brief  The application entry point.
+  * @retval int
+  */
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
 
   /* USER CODE END 1 */
 
@@ -72,80 +95,26 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
-  MX_I2C1_Init();
-  MX_CRC_Init();
+  MX_TIM9_Init();
   /* USER CODE BEGIN 2 */
 
 
-uint8_t ret;
-uint8_t pwrmng[2] = {0x6B, 0x00};
+ HAL_GPIO_WritePin (GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+ HAL_GPIO_WritePin (GPIOB, GPIO_PIN_5, GPIO_PIN_RESET);
+
+HAL_TIM_PWM_Start(&htim9, TIM_CHANNEL_1);
+//HAL_TIM_PWM_Start(&htim11, TIM_CHANNEL_1);
 
 
 
-  ret = HAL_I2C_Master_Transmit(&hi2c1,MPU6050_ADDR, pwrmng, 2, HAL_MAX_DELAY);
-  if ( ret != HAL_OK ) {
-    	   	    serialWrite(ret);
-  }
+  /* USER CODE END 2 */
 
-  HAL_Delay(1000);
-
-
-  uint8_t smpleratediv1[2] = {0x19, 0x00}; 
-    ret = HAL_I2C_Master_Transmit(&hi2c1,MPU6050_ADDR, smpleratediv1, 2, HAL_MAX_DELAY);
-     if ( ret != HAL_OK ) {
-       	   	    serialWrite(ret);
-     }
-
-     HAL_Delay(1000);
-
-
-  //ACCEL CONFIG//
-  uint8_t accconfig[2] = {0x1C, 0x00};
-  ret = HAL_I2C_Master_Transmit(&hi2c1,MPU6050_ADDR, accconfig, 2, HAL_MAX_DELAY);
-  if (ret != HAL_OK){
-	  serialWrite(ret);
-  }
-
-  magconfig();
-   
-/* USING MAGNETO CORRECTION
-     arm_matrix_instance_f32 A;
-     arm_matrix_instance_f32 B;
-     arm_matrix_instance_f32 AB;
-     arm_status status;
-
-      arm_mat_init_f32(&A, 3, 3, (float32_t *)A_f32);
-      arm_mat_init_f32(&B, 3, 1, (float32_t *)mxyz);
-      arm_mat_init_f32(&AB, 3, 1, (float32_t *)AB_f32);
-
-       status = arm_mat_mult_f32(&A, &B, &AB);
-       */
-	
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
   while (1)
   {
-    read_mag(mxyz);
-	  	/* USING MAGNETO CORRECTION
-	  status = arm_mat_mult_f32(&A, &B, &AB); */
-
-     read_gyro();
-
-     read_acc();
-
-
-   //Accounting for Misalignment in Mag axis compared to ACC & Gyro
-    MadgwickAHRSupdate(Gy, Gx, -Gz,  Ay, Ax, -Az,  mxyz[0],  mxyz[1],  mxyz[2]);
-
-
-	z = atan2(2*q1*q2 - 2*q0*q3, 2*q0*q0 + 2*q1*q1 - 1);
-	x = -asin(2*q1*q3 + 2*q0*q2);
-	y = atan2(2*q2*q3 - 2*q0*q1, 2*q0*q0 + 2*q3*q3 - 1);
-
-//sends yaw, pitch and roll values through UART to be read in Python (Vpython)
-  sprintf((char*)snum, "%.2f,%.2f,%.2f,\r \n ", x, y, z);
-
-	HAL_Delay(25);
-
-	HAL_UART_Transmit(&huart2, snum, strlen((char*)snum), HAL_MAX_DELAY);
+	  HAL_Delay(25);
+	  HAL_UART_Transmit(&huart2, direction, strlen((char*)direction), HAL_MAX_DELAY);
 
     /* USER CODE END WHILE */
 
@@ -154,168 +123,247 @@ uint8_t pwrmng[2] = {0x6B, 0x00};
   /* USER CODE END 3 */
 }
 
-
-void read_acc(void){
-
-	 uint8_t Rec_Data[6];
-	 int16_t Accel_X_RAW;
-	 int16_t Accel_Y_RAW;
-	 int16_t Accel_Z_RAW;
-
-	 uint8_t ACCEL_XOUT_H_REG = 0x3B;
-
-	  HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, ACCEL_XOUT_H_REG, 1, Rec_Data, 6, 1000);
-
-	  Accel_X_RAW = (int16_t)(Rec_Data[0] << 8 | Rec_Data [1]);
-	  Accel_Y_RAW = (int16_t)(Rec_Data[2] << 8 | Rec_Data [3]);
-	  Accel_Z_RAW = (int16_t)(Rec_Data[4] << 8 | Rec_Data [5]);
-
-	  Ax = (Accel_X_RAW/16384.0)+0.43;  // get the float g
-	  Ay = (Accel_Y_RAW/16384.0)+0.71;
-	  Az = (Accel_Z_RAW/16384.0)+0.08;
-}
-
-void read_gyro(void){
-
-	uint8_t GYRO_XOUT_H_REG = 0x43;
-
-	uint8_t Rec_Data[6];
-
-	double degtorad = 0.0174532925;
-
-	int16_t Gyro_X_RAW;
-	int16_t Gyro_Y_RAW;
-	int16_t Gyro_Z_RAW;
-
-
-	 HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, GYRO_XOUT_H_REG, 1, Rec_Data, 6, 1000);
-
-		  Gyro_X_RAW = (int16_t)(Rec_Data[0] << 8 | Rec_Data [1]);
-		  Gyro_Y_RAW = (int16_t)(Rec_Data[2] << 8 | Rec_Data [3]);
-		  Gyro_Z_RAW = (int16_t)(Rec_Data[4] << 8 | Rec_Data [5]);
-
-     if(samples<128){
-    	 samples++;
-    	 return;
-     } else if (samples < 256) {
-
-    	 gyroxoffset += Gyro_X_RAW;
-    	 gyroyoffset += Gyro_Y_RAW;
-    	 gyrozoffset += Gyro_Z_RAW;
-    	 samples++;
-    	 return;
-     } else if (samples ==256){
-    	 gyroxoffset /= 128;
-    	 gyroyoffset /= 128;
-    	 gyrozoffset /= 128;
-     }
-
-
-		  Gx = (Gyro_X_RAW/131.0)*degtorad;
-		  Gy = (Gyro_Y_RAW/131.0)*degtorad;
-		  Gz = (Gyro_Z_RAW/131.0)*degtorad;
-}
-
-
-
-void serialWrite(unsigned int n)
- {
-     itoa(n, (char*)snum, 10);
- }
-
-double* read_mag(double magfinal[3])
-	  {
-
-	  uint8_t magdata[7];
-	  //Reading MAG data
-	  uint8_t ST1 = 0x02;
-	  uint8_t status1; //might have to change to buffer and remove pointer in READ func below
-	  float SCALE = 0.1499;
-
-	  uint8_t DATA_READY = 0x02; //might have to change to 1
-	  uint8_t HXL_AD = 0x03; //first measurement byte
-	  uint8_t HOFL_MASK = 0x8; //reading HOFL ST2 bit
-	  int16_t MAG_X_RAW;
-	  int16_t MAG_Y_RAW;
-	  int16_t MAG_Z_RAW;
-
-
-	  HAL_I2C_Mem_Read(&hi2c1, MAG_AD, ST1, 1, &status1, 1, 1000);
-	   if((status1 & DATA_READY) == DATA_READY){
-	 	  HAL_I2C_Mem_Read(&hi2c1, MAG_AD, HXL_AD, 1, magdata, 7, 1000);
-
-	 	  if(!(magdata[6] & HOFL_MASK)){ //if no overflow store data
-
-	 		  MAG_X_RAW = magdata[0] | (magdata[1]<<8);
-	 		  MAG_Y_RAW = magdata[2] | (magdata[3]<<8);
-	 		  MAG_Z_RAW = magdata[4] | (magdata[5]<<8);
-
-	 		 /*
-	 		 magfinal[0] = MAG_X_RAW*asax*SCALE; //Gauss (Gs)
-	 		 magfinal[1] = MAG_Y_RAW*asay*SCALE;
-	 		 magfinal[2] = MAG_Z_RAW*asaz*SCALE; */
-
-	 		//withcalibration
-			 
-			  /* USING MAGNETO CORRECTION
-	 		 magfinal[0] = MAG_X_RAW*asax*SCALE-13.578836;
-	 		 magfinal[1] = MAG_Y_RAW*asay*SCALE-15.216318;
-	 		 magfinal[2] = MAG_Z_RAW*asaz*SCALE-6.231530; */
-
-
-	 		magfinal[0] = ((MAG_X_RAW*asax*SCALE)-(hardx))*softx; //Gauss (Gs)
-	 	    magfinal[1] = ((MAG_Y_RAW*asay*SCALE)-(hardy))*softy;
-	 	    magfinal[2] = ((MAG_Z_RAW*asaz*SCALE)-(hardz))*softz;
-
-
-	 	  }
-	 	  else{
-
-	 		  strcpy((char*)snum, "Overflow Tx\r\n");
-
-	 	  }
-
-	 	  }
-	   return magfinal;
-	  }
-
-void magconfig(void)
+/**
+  * @brief System Clock Configuration
+  * @retval None
+  */
+void SystemClock_Config(void)
 {
-uint8_t ret;
-uint8_t magsenstivity[3];
-uint8_t USER_CTRL_AD[2] = {0x6A, 0x00}; //disables I2C master (MPU9250)
-ret = HAL_I2C_Master_Transmit(&hi2c1,MPU6050_ADDR, USER_CTRL_AD, 2, HAL_MAX_DELAY);
-if ( ret != HAL_OK ) {
-     	   	    serialWrite(ret);
-   }
-uint8_t INT_BYPASS_CONFIG_AD[2]= {0x37, 0x02}; //enables bypass multiplexer (MPU9250)
-ret = HAL_I2C_Master_Transmit(&hi2c1,MPU6050_ADDR, INT_BYPASS_CONFIG_AD, 2, HAL_MAX_DELAY);
-if ( ret != HAL_OK ) {
-     	   	    serialWrite(ret);
-   }
-uint8_t CNTL1_AD[2]= {0x0A, 0x1F}; //FUSE ROM ACCESS MODE
-ret = HAL_I2C_Master_Transmit(&hi2c1,MAG_AD, CNTL1_AD, 2, HAL_MAX_DELAY);
-if ( ret != HAL_OK ) {
-     	   	    serialWrite(ret);
-   }
-HAL_Delay(100);
-uint8_t ASAX_AD = 0x10; //Adjustment Values
-HAL_I2C_Mem_Read(&hi2c1, MAG_AD, ASAX_AD, 1, magsenstivity, 3, 1000);
-asax = (magsenstivity[0]-128)*0.5/128+1;
-asay = (magsenstivity[1]-128)*0.5/128+1;
-asaz = (magsenstivity[2]-128)*0.5/128+1;
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-uint8_t CNTL1_AD1[2]= {0x0A, 0x00}; //sets magnometer power down mode
-ret = HAL_I2C_Master_Transmit(&hi2c1,MAG_AD, CNTL1_AD1, 2, HAL_MAX_DELAY);
-if ( ret != HAL_OK ) {
-     	   	    serialWrite(ret);
-   }
-HAL_Delay(100);
+  /** Configure the main internal regulator output voltage
+  */
+  __HAL_RCC_PWR_CLK_ENABLE();
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM = 16;
+  RCC_OscInitStruct.PLL.PLLN = 336;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV4;
+  RCC_OscInitStruct.PLL.PLLQ = 4;
+  RCC_OscInitStruct.PLL.PLLR = 2;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Initializes the CPU, AHB and APB buses clocks
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-uint8_t CNTL1_AD2[2]= {0x0A, 0x16}; //sets magnometer continuous mode2 & 16-bit output
-ret = HAL_I2C_Master_Transmit(&hi2c1,MAG_AD, CNTL1_AD2, 2, HAL_MAX_DELAY);
-if ( ret != HAL_OK ) {
-     	   	    serialWrite(ret);
-   }
-HAL_Delay(100);
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
+
+/**
+  * @brief TIM9 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM9_Init(void)
+{
+
+  /* USER CODE BEGIN TIM9_Init 0 */
+
+  /* USER CODE END TIM9_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM9_Init 1 */
+
+  /* USER CODE END TIM9_Init 1 */
+  htim9.Instance = TIM9;
+  htim9.Init.Prescaler = 0;
+  htim9.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim9.Init.Period = 65535;
+  htim9.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim9.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim9) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim9, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim9) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim9, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM9_Init 2 */
+
+  /* USER CODE END TIM9_Init 2 */
+  HAL_TIM_MspPostInit(&htim9);
+
+}
+
+/**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+
+  /* USER CODE END USART2_Init 2 */
+
+}
+
+/**
+  * @brief GPIO Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_GPIO_Init(void)
+{
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+  /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOH_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : B1_Pin */
+  GPIO_InitStruct.Pin = B1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PB10 */
+  GPIO_InitStruct.Pin = GPIO_PIN_10;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PA8 */
+  GPIO_InitStruct.Pin = GPIO_PIN_8;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PB4 */
+  GPIO_InitStruct.Pin = GPIO_PIN_4;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PB5 */
+  GPIO_InitStruct.Pin = GPIO_PIN_5;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI4_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI4_IRQn);
+
+}
+
+/* USER CODE BEGIN 4 */
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+
+	if(GPIO_Pin == GPIO_PIN_4 && pulseticks<224){
+		pulseticks++;
+				if(HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_10)>0){
+					  		 sprintf((char*)direction, "anticlockwise \r \n");}
+				else if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_10)==0)
+				{
+					  				sprintf((char*)direction, "clockwise \r \n");
+					  			}
+	}
+	else if(GPIO_Pin == GPIO_PIN_4 && pulseticks>=224) {
+				  revoultions++;
+				  pulseticks=0;
+			  		}
+}
+
+
+/* USER CODE END 4 */
+
+/**
+  * @brief  This function is executed in case of error occurrence.
+  * @retval None
+  */
+void Error_Handler(void)
+{
+  /* USER CODE BEGIN Error_Handler_Debug */
+  /* User can add his own implementation to report the HAL error return state */
+  __disable_irq();
+  while (1)
+  {
+  }
+  /* USER CODE END Error_Handler_Debug */
+}
+
+#ifdef  USE_FULL_ASSERT
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
+void assert_failed(uint8_t *file, uint32_t line)
+{
+  /* USER CODE BEGIN 6 */
+  /* User can add his own implementation to report the file name and line number,
+     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+  /* USER CODE END 6 */
+}
+#endif /* USE_FULL_ASSERT */
+
+/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
