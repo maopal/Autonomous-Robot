@@ -331,6 +331,41 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 			  		}
 }
 
+/*void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+
+	if(GPIO_Pin == GPIO_PIN_4){
+				if(HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_10)>0){
+							pulseticks++;
+							if(pulseticks>=224){
+								revoultions++;
+								anticlockwiserev++;
+								pulseticks =1;
+								theta= revoultions+pulseticks/224;
+								sprintf((char*)direction, "theta=%.2f \r \n", theta);
+								HAL_UART_Transmit(&huart2, direction, strlen((char*)direction), HAL_MAX_DELAY);
+							}
+							theta= revoultions+pulseticks/224;
+					sprintf((char*)direction, "theta=%.2f \r \n", theta);
+					HAL_UART_Transmit(&huart2, direction, strlen((char*)direction), HAL_MAX_DELAY);}
+				else if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_10)==0)
+				{           pulseticks--;
+										if(pulseticks<=-224){
+												revoultions--;
+												clockwiserev++;
+												pulseticks =-1;
+												theta= revoultions+pulseticks/224;
+												sprintf((char*)direction, "theta=%.2f \r \n", theta);
+												HAL_UART_Transmit(&huart2, direction, strlen((char*)direction), HAL_MAX_DELAY);
+											}
+										theta= revoultions+pulseticks/224;
+					  				sprintf((char*)direction, "theta=%.2f\r \n", theta);
+					  				HAL_UART_Transmit(&huart2, direction, strlen((char*)direction), HAL_MAX_DELAY);
+					  			}
+	}
+
+}*/
+
+
 
 /* USER CODE END 4 */
 
